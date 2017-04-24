@@ -4,6 +4,7 @@ import sys
 import re
 from os import listdir, getcwd
 from os.path import isfile, join
+import matplotlib.cm as cm
 
 test = "test"
 
@@ -15,6 +16,7 @@ class Data:
         self.filename = filename
         self.description = description
         self.typeMeas = typeMeas
+        self.fit = None
         if typeMeas == "Vds":
             self.toDataVds()
         elif typeMeas == "Vgate":
@@ -61,22 +63,41 @@ class Data:
         with open(self.filename) as f:
             self.header = f.next().rstrip().split(',')
 
+            # Put each line into an array
             for line in f:
                 data.append([float(i) for i in line.rstrip().split(',')])
-
-        data = np.transpose(np.array(data)).tolist()
-        self.data = data[1:]
+        # Way data is saved requires a transpose of data array for easier use
+        data = np.transpose(np.array(data)).tolist
+        # First row is Vgate values
         self.x_axis = data[0]
+        # Rest is DS current values
+        self.data = data[1:]
+
+    def fitData(self):
+
+        self.fit = []
+        self.slope = []
+        for y in self.data:
+            z = np.polyfit(self.x_axis, y, 1)
+            self.slope.append(z[0])
+            fit = np.poly1d(z)
+            self.fit.append(fit(self.x_axis))
 
     def plotData(self):
 
-        y_labels = []
-        ys = []
-        max_y, min_y = 0, sys.maxint
-
         fig, ax = plt.subplots(1, 1)
-        for y, lbl in zip(self.data, self.header):
-            ax.plot(self.x_axis, y, label=lbl)
+
+        colors = cm.rainbow(np.linspace(0, 1, len(self.data)))
+
+        if self.fit:
+            for y, y_fit, slope, lbl, c in zip(self.data, self.fit, self.slope, self.header, colors):
+                ax.plot(self.x_axis, y, label="%s\nSlope: %.4E" % (lbl, slope), color=c)
+                ax.plot(self.x_axis, y_fit, color=c, linestyle='--')
+        else:
+            for y, lbl in zip(self.data, self.header):
+                ax.plot(self.x_axis, y, label=lbl)
+
+        ax.set_xlim([min(self.x_axis), max(self.x_axis)])
 
         if self.typeMeas == "Vgate":
             ax.set_xlabel("Gate Voltage (V)")
@@ -107,6 +128,14 @@ def findPath():
     except:
         return None
 
+def listAvail():
+
+    mypath = getcwd() + "\\Data"
+    files = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+
+    for i in range(0, len(files)):
+        print "%d : %s" % (i, files[i])
+
 def main():
 
     data_arr = []
@@ -120,7 +149,17 @@ def main():
 
         if inp == 'h':
             help()
-        elif inp == 'd':
+        elif inp == 'avail':
+            listAvail()
+        elif inp == 'fit':
+            for i in range(len(data_arr)):
+                print "%d -- %s" % (i, data_arr[i])
+            print ""
+            whichFit = input("Which data do you want to fit: ")
+            toFit = data_arr[whichFit]
+            toFit.fitData()
+            toFit.plotData()
+        elif inp == 'add':
             measType = raw_input("Type of data: ")
 
             # Catch wrong typename of data
@@ -142,10 +181,10 @@ def main():
                     print "Unknown command"
             else:
                 print "Incorrect path"
-        elif inp == 'l':
+        elif inp == 'ls':
             for i in range(len(data_arr)):
                 print "%d -- %s" % (i, data_arr[i])
-        elif inp == 'p':
+        elif inp == 'plot':
             try:
                 pIndex = input("Which data do you want to plot: ")
                 pIndex = int(pIndex)
@@ -165,8 +204,10 @@ def main():
 def help():
     print "Commands:"
     print "\th - This help text"
-    print "\td - Enter data, enter 'gate' for Vgate sweep data and\n\t\t'ds' for Vds sweep data"
-    print "\tl - List all currently loaded data"
-    print "\tp - Plot data saved at chosen index"
+    print "\tadd - Enter data, enter 'gate' for Vgate sweep data and\n\t\t'ds' for Vds sweep data"
+    print "\tls - List all currently loaded data"
+    print "\tavail - List all available data in the ~\Data directory"
+    print "\tplot - Plot data saved at chosen index"
+    print "\tfit - fit all data given in a selected data object"
 
 main()
