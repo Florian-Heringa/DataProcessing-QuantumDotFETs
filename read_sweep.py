@@ -70,9 +70,6 @@ class Data:
             N = ((self.gateVoltageEnd - self.gateVoltageStart) / self.gateVoltageStep) + 1
 
             data = np.transpose(np.array(data))
-            print "--"
-            print data[2].reshape(-1, 1).reshape((N, n))
-            print "--"
             # Reshape data to correct format
             self.data = data[2].reshape(-1, 1).reshape((N, n))[::, :-self.padding - 1:]
             self.x_axis = data[1][:n - self.padding - 1:]
@@ -160,6 +157,11 @@ def findPath():
     except:
         return None
 
+def ls(data_arr):
+    for i in range(len(data_arr)):
+        print "%d -- %s" % (i, data_arr[i])
+    print ""
+
 def listAvail():
 
     mypath = getcwd() + "\\Data"
@@ -168,10 +170,60 @@ def listAvail():
     for i in range(0, len(files)):
         print "%d : %s" % (i, files[i])
 
+def doThis(data_arr, cmd):
+
+    ls(data_arr)
+    try:
+        index = input("Which data do you want to %s:" % (cmd))
+        data_selection = data_arr[index]
+        action(data_selection, cmd)
+    except Exception as e:
+        print "Something went wrong: %s" % e
+
+def action(data_selection, cmd):
+
+    if cmd == 'fit':
+        data_selection.fitData()
+        data_selection.plotData(fit=True)
+    elif cmd == 'derive':
+        data_selection.derivative()
+        data_selection.plotData(derivative=True)
+    elif cmd == 'plot':
+        data_selection.plotData()
+
+def addData():
+
+    acceptedData = ['gate', 'sweep']
+    global data_arr
+
+    # findPath returns None when incorrectly specified
+    path = findPath()
+    if path == None:
+        print "Incorrect path"
+        return
+
+    measType = raw_input("Type of data: ")
+    # Catch wrong typename of data
+    if measType not in acceptedData:
+        print "Not an accepted data type"
+        return
+
+    dscr = raw_input("Enter a description: ")
+
+    if measType == 'gate':
+        data_arr.append(Data(path, "Vgate", description=dscr))
+    elif measType == 'sweep':
+        data_arr.append(Data(path, "Vds", description=dscr))
+    else:
+        print "Unknown command"
+        return
+###############################################
+
+data_arr = []
+
 def main():
 
-    data_arr = []
-    acceptedData = ['gate', 'sweep']
+    global data_arr
 
     print "Quantum Dot Fet Data Visualisation script"
     print "(Enter 'h' for help)"
@@ -183,53 +235,12 @@ def main():
             help()
         elif inp == 'avail':
             listAvail()
-        elif inp == 'derive':
-            whichData = input("Which data do you want the derivative of: ")
-            toDerive = data_arr[whichData]
-            toDerive.derivative()
-            toDerive.plotData(derivative=True)
-        elif inp == 'fit':
-            for i in range(len(data_arr)):
-                print "%d -- %s" % (i, data_arr[i])
-            print ""
-            whichFit = input("Which data do you want to fit: ")
-            toFit = data_arr[whichFit]
-            toFit.fitData()
-            toFit.plotData(fit=True)
+        elif inp == 'derive' or inp == 'fit' or inp == 'plot':
+            doThis(data_arr, inp)
         elif inp == 'add':
-            measType = raw_input("Type of data: ")
-
-            # Catch wrong typename of data
-            if measType not in acceptedData:
-                print "Not an accepted data type"
-                inp = raw_input("Enter Command: ")
-                continue
-
-            path = findPath()
-            dscr = raw_input("Enter a description: ")
-
-            # findPath returns None when incorrectly specified
-            if path:
-                if measType == 'gate':
-                    data_arr.append(Data(path, "Vgate", description=dscr))
-                elif measType == 'sweep':
-                    data_arr.append(Data(path, "Vds", description=dscr))
-                else:
-                    print "Unknown command"
-            else:
-                print "Incorrect path"
+            addData()
         elif inp == 'ls':
-            for i in range(len(data_arr)):
-                print "%d -- %s" % (i, data_arr[i])
-        elif inp == 'plot':
-            try:
-                pIndex = input("Which data do you want to plot: ")
-                pIndex = int(pIndex)
-                data_arr[pIndex].plotData()
-            except Exception as e:
-                print "Something went Wrong : %s" % e
-                inp = raw_input("Enter Command: ")
-                continue
+            ls(data_arr)
         else:
             print "Unknown command"
 
@@ -250,6 +261,5 @@ def help():
 
 main()
 
-## TODO: make repl cleaner, make functions for repeated similar use.
-##       plot with parameters from repl. Interactive mpl env.
+## TODO: plot with parameters from repl. Interactive mpl env.
 ##       Choose directory where files are stored within ~\Data
