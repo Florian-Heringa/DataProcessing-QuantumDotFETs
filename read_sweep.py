@@ -8,6 +8,25 @@ import matplotlib.cm as cm
 
 test = "test"
 
+class Derivatives:
+
+    def __init__(self, xs, yset):
+
+        self.derivatives = [None, None]
+        self.derivatives[0] = self.Derivative(xs, yset)
+        self.derivatives[1] = self.Derivative(xs, self.derivatives[0])
+
+    def Derivative(self, xs, yset):
+
+        tmp = []
+        for ys in yset:
+            dy = np.zeros(ys.shape, np.float)
+            dy[0:-1] = np.diff(ys)/np.diff(xs)
+            dy[-1] = (ys[-1] - ys[-2])/(xs[-1] - xs[-2])
+            tmp.append(dy)
+
+        return tmp
+
 class Data:
 
     ## Initialisation
@@ -17,6 +36,7 @@ class Data:
         self.description = description
         self.typeMeas = typeMeas
         self.fit = None
+        self.derivatives = None
         if typeMeas == "Vds":
             self.toDataVds()
         elif typeMeas == "Vgate":
@@ -50,9 +70,12 @@ class Data:
             N = ((self.gateVoltageEnd - self.gateVoltageStart) / self.gateVoltageStep) + 1
 
             data = np.transpose(np.array(data))
+            print "--"
+            print data[2].reshape(-1, 1).reshape((N, n))
+            print "--"
             # Reshape data to correct format
-            self.data = data[2].reshape(-1, 1).reshape((N, n))[::, :-self.padding:]
-            self.x_axis = data[1][:n - self.padding:]
+            self.data = data[2].reshape(-1, 1).reshape((N, n))[::, :-self.padding - 1:]
+            self.x_axis = data[1][:n - self.padding - 1:]
             self.header = ["Vgate %.2f" % (vg) for vg in data[0][::n]]
 
     ## Read data file and convert to array
@@ -83,16 +106,25 @@ class Data:
             fit = np.poly1d(z)
             self.fit.append(fit(self.x_axis))
 
-    def plotData(self):
+    def derivative(self):
+
+        self.derivatives = Derivatives(self.x_axis, self.data)
+
+    def plotData(self, derivative=False, fit=False):
 
         fig, ax = plt.subplots(1, 1)
 
         colors = cm.rainbow(np.linspace(0, 1, len(self.data)))
 
-        if self.fit:
+        if self.fit and fit:
             for y, y_fit, slope, lbl, c in zip(self.data, self.fit, self.slope, self.header, colors):
                 ax.plot(self.x_axis, y, label="%s\nSlope: %.4E" % (lbl, slope), color=c)
                 ax.plot(self.x_axis, y_fit, color=c, linestyle='--')
+        elif self.derivatives and derivative:
+            for y, y_x, y_xx, lbl, c in zip(self.data, self.derivatives.derivatives[0], self.derivatives.derivatives[1], self.header, colors):
+                ax.plot(self.x_axis, y, label="%s" % (lbl), color=c)
+                ax.plot(self.x_axis, y_x, color=c, linestyle='--', label="%s\_x"%(lbl))
+                ax.plot(self.x_axis, y_xx, color=c, linestyle='-.', label="%s\_xx"%(lbl))
         else:
             for y, lbl in zip(self.data, self.header):
                 ax.plot(self.x_axis, y, label=lbl)
@@ -151,6 +183,11 @@ def main():
             help()
         elif inp == 'avail':
             listAvail()
+        elif inp == 'derive':
+            whichData = input("Which data do you want the derivative of: ")
+            toDerive = data_arr[whichData]
+            toDerive.derivative()
+            toDerive.plotData(derivative=True)
         elif inp == 'fit':
             for i in range(len(data_arr)):
                 print "%d -- %s" % (i, data_arr[i])
@@ -158,7 +195,7 @@ def main():
             whichFit = input("Which data do you want to fit: ")
             toFit = data_arr[whichFit]
             toFit.fitData()
-            toFit.plotData()
+            toFit.plotData(fit=True)
         elif inp == 'add':
             measType = raw_input("Type of data: ")
 
@@ -208,6 +245,11 @@ def help():
     print "\tls - List all currently loaded data"
     print "\tavail - List all available data in the ~\Data directory"
     print "\tplot - Plot data saved at chosen index"
+    print "\tderive - Calculate and plot first and second derivatives of data and plot"
     print "\tfit - fit all data given in a selected data object"
 
 main()
+
+## TODO: make repl cleaner, make functions for repeated similar use.
+##       plot with parameters from repl. Interactive mpl env.
+##       Choose directory where files are stored within ~\Data
