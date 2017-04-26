@@ -5,7 +5,6 @@ import re
 from os import listdir, getcwd
 from os.path import isfile, join
 import matplotlib.cm as cm
-import webbrowser
 
 class Derivatives:
 
@@ -229,8 +228,7 @@ def main():
     inp = raw_input("Enter Command: ")
 
     while inp != 'q':
-        webbrowser.open("https://goo.gl/q8z2kz")
-        
+
         if inp == 'h':
             help()
         elif inp == 'avail':
