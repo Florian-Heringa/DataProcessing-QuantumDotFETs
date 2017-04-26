@@ -39,9 +39,27 @@ class Data:
             self.toDataVds()
         elif typeMeas == "Vgate":
             self.toDataGate()
+        elif typeMeas == "time":
+            self.toTimeData()
 
     def __str__(self):
         return "%s-type: %s" % (self.typeMeas, self.description)
+
+    def toTimeData(self):
+
+        with open(self.filename) as f:
+
+            header = f.next().rstrip().split(',')
+            data = []
+            
+            for line in f:
+                data.append([float(num) for num in line.rstrip().split(',')])
+
+        self.header = header[2]
+        data = np.transpose(np.arrary(data))
+        start_time = data[0, 0]
+        self.x_axis = [t - start_time for t in data[0]]
+        self.data = data[2]
 
     def toDataVds(self):
 
@@ -132,6 +150,9 @@ class Data:
         if self.typeMeas == "Vds":
             ax.set_xlabel("Drain-Source Voltage (V)")
             ax.set_ylabel("Drain-Source Current (A)")
+        if self.typeMeas == "time":
+            ax.set_xlabel("Time (ms)")
+            ax.setylabel("Drain-Source Current (A)")
         ax.ticklabel_format(style="sci", axis="y", scilimits=(0,0), useMathText=True)
         ax.legend(framealpha=.5, loc="lower left", bbox_to_anchor=(1, 0))
         box = ax.get_position()
@@ -191,7 +212,7 @@ def action(data_selection, cmd):
 
 def addData():
 
-    acceptedData = ['gate', 'sweep']
+    acceptedData = ['gate', 'sweep', 'time']
     global data_arr
 
     # findPath returns None when incorrectly specified
@@ -212,6 +233,8 @@ def addData():
         data_arr.append(Data(path, "Vgate", description=dscr))
     elif measType == 'sweep':
         data_arr.append(Data(path, "Vds", description=dscr))
+    elif measType == 'time':
+        data_arr.append(Data(path, "time", description=dscr))
     else:
         print "Unknown command"
         return
