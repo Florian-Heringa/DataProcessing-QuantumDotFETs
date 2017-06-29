@@ -3,6 +3,7 @@ import numpy as np
 import re
 from os import listdir, getcwd
 from os.path import isfile, join
+import math
 
 ### Call Program by using 'convert_VDSsweep "filename"' on the commandline
 ### from the folder where the file is placed.
@@ -34,8 +35,8 @@ def main(filename):
             data.append([float(num) for num in line.rstrip().split(',')])
 
         # Calculate empty steps and amount of datapoints
-        n = ((stopVds - startVds) / stepSizeVds) + padding + 1
-        N = ((gateVoltageEnd - gateVoltageStart) / gateVoltageStep) + 1
+        n = math.ceil(((stopVds - startVds) / stepSizeVds)) + padding + 1
+        N = ((gateVoltageEnd - gateVoltageStart) / gateVoltageStep) + 1 if gateVoltageStep > 0 else 1
 
         # Put data into np array, makes operations easier
         data = np.transpose(np.array(data))

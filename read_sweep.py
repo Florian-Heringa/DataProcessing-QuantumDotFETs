@@ -10,6 +10,7 @@ class Derivatives:
 
     def __init__(self, xs, yset):
 
+        # [first_derivative, second_derivative]
         self.derivatives = [None, None]
         self.derivatives[0] = self.Derivative(xs, yset)
         self.derivatives[1] = self.Derivative(xs, self.derivatives[0])
@@ -51,15 +52,18 @@ class Data:
 
             header = f.next().rstrip().split(',')
             data = []
-            
+
             for line in f:
                 data.append([float(num) for num in line.rstrip().split(',')])
 
         self.header = header[2]
-        data = np.transpose(np.arrary(data))
+        data = np.transpose(np.array(data))
         start_time = data[0, 0]
         self.x_axis = [t - start_time for t in data[0]]
-        self.data = data[2]
+        self.data = [data[2]]
+
+        print len(self.data)
+        print len(self.x_axis)
 
     def toDataVds(self):
 
@@ -82,14 +86,14 @@ class Data:
             for line in f:
                 data.append([float(num) for num in line.rstrip().split(',')])
 
-            n = ((self.stopVds - self.startVds) / self.stepSizeVds) + self.padding + 1
-            N = ((self.gateVoltageEnd - self.gateVoltageStart) / self.gateVoltageStep) + 1
+        n = ((self.stopVds - self.startVds) / self.stepSizeVds) + self.padding + 1
+        N = ((self.gateVoltageEnd - self.gateVoltageStart) / self.gateVoltageStep) + 1
 
-            data = np.transpose(np.array(data))
-            # Reshape data to correct format
-            self.data = data[2].reshape(-1, 1).reshape((N, n))[::, :-self.padding - 1:]
-            self.x_axis = data[1][:n - self.padding - 1:]
-            self.header = ["Vgate %.2f" % (vg) for vg in data[0][::n]]
+        data = np.transpose(np.array(data))
+        # Reshape data to correct format
+        self.data = data[2].reshape(-1, 1).reshape((N, n))[::, :-self.padding - 1:]
+        self.x_axis = data[1][:n - self.padding - 1:]
+        self.header = ["Vgate %.2f" % (vg) for vg in data[0][::n]]
 
     ## Read data file and convert to array
     def toDataGate(self):
@@ -103,7 +107,7 @@ class Data:
             for line in f:
                 data.append([float(i) for i in line.rstrip().split(',')])
         # Way data is saved requires a transpose of data array for easier use
-        data = np.transpose(np.array(data)).tolist
+        data = np.transpose(np.array(data)).tolist()
         # First row is Vgate values
         self.x_axis = data[0]
         # Rest is DS current values
@@ -152,9 +156,10 @@ class Data:
             ax.set_ylabel("Drain-Source Current (A)")
         if self.typeMeas == "time":
             ax.set_xlabel("Time (ms)")
-            ax.setylabel("Drain-Source Current (A)")
+            ax.set_ylabel("Drain-Source Current (A)")
         ax.ticklabel_format(style="sci", axis="y", scilimits=(0,0), useMathText=True)
         ax.legend(framealpha=.5, loc="lower left", bbox_to_anchor=(1, 0))
+        ax.set_title(self.typeMeas)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
         plt.show()
