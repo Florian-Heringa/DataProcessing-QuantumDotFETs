@@ -49,7 +49,7 @@ def main(filename):
     x_axis = np.transpose(x_axis)
     current = np.transpose(current)
 
-    newFile = filename + "_EDITED"
+    newFile = filename + "_EDITED.csv"
     f = open(newFile, "w")
     f.close()
     with open(newFile, 'a') as fN:
